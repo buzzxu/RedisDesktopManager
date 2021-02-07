@@ -1,6 +1,5 @@
 # http://docs.redisdesktop.com/en/latest/install/
 # https://github.com/actions/virtual-environments/blob/master/images/win/Windows2019-Readme.md
-# https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-syntax-for-github-actions
 
 # This is a basic workflow to help you get started with Actions
 name: CI for redis desktop manager
@@ -9,21 +8,19 @@ name: CI for redis desktop manager
 # events but only for the master branch
 on:
   push:
-    branches: [ pre-release ]
+    branches: [ master ]
     paths-ignore: 
       - 'README.md'
       - 'LICENSE'
   pull_request:
-    branches: [ pre-release ]
+    branches: [ master ]
     paths-ignore: 
       - 'README.md'
       - 'LICENSE'
-  schedule:
-    - cron: '0 22 * * *' # Runs at 22:00 UTC every day
 
 env:
-  RDM_REF: 2021
-  VERSION: 2021.99.0
+  RDM_REF: 2021.2
+  VERSION: 2021.2.0
   PYTHON_EMBEDDED_VERSION: 3.7.9
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
@@ -40,26 +37,18 @@ jobs:
       #   with:
       #     fetch-depth: 0
 
-      # delete old release
-      - uses: dev-drprasad/delete-tag-and-release@v0.1.2
-        with:
-          delete_release: true # default: false
-          tag_name: ${{ env.RDM_REF }}-nightly # tag name to delete
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
         with:
-          tag_name: ${{ env.RDM_REF }}-nightly
-          release_name: v${{ env.RDM_REF }}-nightly
+          tag_name: ${{ env.RDM_REF }}
+          release_name: v${{ env.RDM_REF }}
           body: |
-            ${{ env.RDM_REF }}-nightly
+            ${{ env.RDM_REF }}
           draft: false
-          prerelease: true
+          prerelease: false
 
   build_on_windows:
     needs: create_release
@@ -106,7 +95,6 @@ jobs:
       run: |
         cd rdm/3rdparty/lz4/build/cmake
         cmake -G "Visual Studio 16 2019" -A x64 -DLZ4_BUNDLED_MODE=ON -DBUILD_SHARED_LIBS=ON --build .
-        tree . /f
         cmake --build . --config "Release"
 #    # install python3  
 #    - name: install Python3
@@ -208,7 +196,6 @@ jobs:
       run: |
         cd rdm/3rdparty/lz4/build/cmake
         cmake -DLZ4_BUNDLED_MODE=ON -DBUILD_SHARED_LIBS=ON --build .
-        ls
         make -s -j 8
     # install QT   
     - name: install QT
