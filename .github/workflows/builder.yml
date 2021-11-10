@@ -98,10 +98,12 @@ jobs:
       run: |
         cd rdm/3rdparty/qredisclient/3rdparty/hiredis
         git apply ../hiredis-win.patch
+
     - name: install zlib
       run: |
         cd rdm/3rdparty
         nuget install zlib-msvc14-x64 -Version 1.2.11.7795
+
     # from https://github.com/lework/RedisDesktopManager-Windows
     - name: build lz4
       run: |
@@ -109,6 +111,7 @@ jobs:
         cmake -G "Visual Studio 16 2019" -A x64 -DLZ4_BUNDLED_MODE=ON -DBUILD_SHARED_LIBS=ON -B .
         tree . /f
         cmake --build . --config Release
+
 #    # install python3  
 #    - name: install Python3
 #      uses: actions/setup-python@v2
@@ -134,6 +137,7 @@ jobs:
         forfiles /p "." /s /m __pycache__ /c "cmd /c if @isdir==TRUE rd /s /q @file 2>nul" 2>nul | exit /b 0
         forfiles /p "." /s /m *.dist-info /c "cmd /c if @isdir==TRUE rd /s /q @file 2>nul" 2>nul | exit /b 0
         forfiles /p "." /s /m *.egg-info /c "cmd /c if @isdir==TRUE rd /s /q @file 2>nul" 2>nul | exit /b 0
+
     # https://doc.qt.io/qt-5/linguist-manager.html
     # lupdate rdm.pro
     - name: translations
@@ -143,6 +147,7 @@ jobs:
         lupdate rdm.pro
         lrelease -verbose rdm.pro
         xcopy resources\translations\*.qm ..\build\windows\installer\resources\translations /s /i
+
     # Runs a single command using the runners shell
     - name: build
       shell: cmd
@@ -154,6 +159,7 @@ jobs:
         call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" %vc_arch%
         qmake rdm.pro CONFIG-=debug "VERSION=${{ env.VERSION }}"
         nmake
+
     # 缺少python3.dll
     # fix formatter error, unicodedata _bz2
     - name: add python3.dll
@@ -165,6 +171,7 @@ jobs:
         wget "https://www.python.org/ftp/python/${{ env.PYTHON_EMBEDDED_VERSION }}/python-${{ env.PYTHON_EMBEDDED_VERSION }}-embed-amd64.zip" -outfile "python-embed.zip"
         7z.exe x python-embed.zip python${{ env.PY_LIB_VERSION }}.zip python3.dll python${{ env.PY_LIB_VERSION }}.dll unicodedata.pyd _bz2.pyd
         del python-embed.zip
+
     # windeployqt
     # https://doc.qt.io/qt-5/windows-deployment.html
     # windeployqt.exe --force --qmldir ${{ env.QML2_IMPORT_PATH }} rdm.exe
@@ -179,6 +186,7 @@ jobs:
         cd build\windows\installer\resources
         windeployqt.exe --no-angle --no-opengl-sw --no-compiler-runtime --no-translations --release --force --qmldir ../../../../src/qml rdm.exe
         makensis.exe /V1 /DVERSION=${{ env.VERSION }} ../installer.nsi
+
     - name: Upload Release Asset
       id: upload-release-asset 
       uses: actions/upload-release-asset@v1
@@ -211,6 +219,14 @@ jobs:
         cmake -DLZ4_BUNDLED_MODE=ON -DBUILD_SHARED_LIBS=ON
         ls
         make -s -j 8
+
+    - name: setup python
+      run: |
+        brew unlink python@3.10
+        brew unlink python@3.9
+        brew reinstall python@3.9
+        brew link --overwrite python@3.9
+
     # install QT   
     - name: install QT
       uses: jurplel/install-qt-action@v2
@@ -225,9 +241,9 @@ jobs:
     
 #     - name: setup python
 #       run: |
-#         brew unlink python@3.9
-#         brew install python@3.7
-#         brew link --overwrite python@3.7
+#         brew unlink python@3.10
+#         brew install python@3.9
+#         brew link --overwrite python@3.9
     
     # 使用私有库,egg-links时-t不能同时使用，--user解决权限问题
     # https://github.com/UnitedIncome/serverless-python-requirements/issues/240
@@ -249,11 +265,13 @@ jobs:
         sudo find . -name "__pycache__" | sudo xargs rm -rf
         sudo find . -name "*.dist-info" | sudo xargs rm -rf
         sudo find . -name "*.egg-info" | sudo xargs rm -rf
+
     - name: release translations
       run: |
         cd rdm/src
         lupdate rdm.pro
         lrelease -verbose rdm.pro
+
     # brew install tree && tree -a
     # 去掉initUpdater不然报Please download new version of Redis Desktop Manager，不能使用
     # sed -i '.back' 's/initUpdater();/\/\/initUpdater();/g' ./app/app.cpp
@@ -268,11 +286,13 @@ jobs:
         cd rdm/src
         qmake rdm.pro CONFIG-=debug "VERSION=${{ env.VERSION }}"
         make -s -j 8
+
     - name: copy translations
       run: |
         cd rdm/src
         mkdir ../bin/osx/release/RDM.app/Contents/translations
         cp -f ./resources/translations/*.qm ../bin/osx/release/RDM.app/Contents/translations
+
     - name: package
       id: package
       run: |
@@ -281,6 +301,7 @@ jobs:
         cp -Rf py ./RDM.app/Contents/Resources/
         otool -L ./RDM.app/Contents/MacOS/RDM
         macdeployqt ./RDM.app -qmldir=../../../src/qml -always-overwrite -dmg
+
     - name: Upload Release Asset
       id: upload-release-asset 
       uses: actions/upload-release-asset@v1
